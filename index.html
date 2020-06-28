@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IO Chat</title>
+    <!-- Latest compiled and minified CSS -->
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css"
+      integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu"
+      crossorigin="anonymous"
+    />
+    <!-- Grabbing jquery from google ajax -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- Grabbing the src from socket io lib -->
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+      body {
+        margin-top: 30px;
+      }
+      #messageArea {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <!-- User From -->
+      <div id="userFormArea" class="row">
+        <div class="col-md-12">
+          <form id="userForm">
+            <div class="form-group">
+              <label>Enter Username</label>
+              <input class="form-control" id="username"></textarea>
+              <br />
+              <button type="submit" class="btn btn-primary">
+                Login
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <!-- Message Area-->
+      <div id="messageArea" class="row">
+        <!-- Sidebar -->
+        <div class="col-md-4">
+          <div class="well">
+            <h3>Online users:</h3>
+            <ul class="list-group" id="users"></ul>
+          </div>
+        </div>
+        <!-- Chat window -->
+        <div class="col-md-8">
+          <div class="chat" id="chat"></div>
+          <form id="messageForm">
+            <div class="form-group">
+              <label>Enter Message</label>
+              <textarea class="form-control" id="message"></textarea>
+              <br />
+              <button type="submit" class="btn btn-primary">
+                Send message
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      $(() => {
+        // Socket IO object
+        const socket = io.connect();
+
+        // Grabbing the form, message, chat HTML elements as variable to be used later
+        const messageForm = $('#messageForm');
+        const message = $('#message');
+        const chat = $('#chat');
+
+        const userForm = $('#userForm');
+        const userFormArea = $('#userFormArea');
+        const messageArea = $('#messageArea');
+        const users = $('#users');
+        const userName = $('#username')
+
+        // User form onSubit
+        userForm.submit((e) => {
+            e.preventDefault();
+            socket.emit('new user', userName.val(), (data) => {
+                if(data){
+                    userFormArea.hide();
+                    messageArea.show();
+                }
+            });
+            $userName.val('');
+        })
+
+        // Message form onsubmit - When we hit 'send message'
+        messageForm.submit((e) => {
+          e.preventDefault();
+          // Emiting our message to our defined function (server.js line 31).
+          // Think of first arg like type in react dispatch, second arg is the value of the message text area
+          socket.emit('send message', message.val());
+          // Resetting message text area value
+          message.val('');
+        });
+
+        // When a user sends a message, we emit that message to the rest of the connected sockets (users)
+        // Here we listen for 'new message' and update our chat window to display that message
+        socket.on('new message', (data) => {
+          chat.append(`<div class="well"><strong>${data.user}</strong>: ${data.msg}</div>`);
+        });
+
+        // Listening for get users to be emited from server (which is called when a new user is added)
+        socket.on('get users', (data) => {
+            let html = '';
+            // Data = users array. We iterate over that, adding a new list item for each username
+            for(i = 0; i < data.length; i++){
+                html += `<li class='list-group-item'>${data[i]}</li>`;
+            }
+            // 'users' being the UL element on our html page
+            users.html(html);
+        })
+      });
+    </script>
+  </body>
+</html>
